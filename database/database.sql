@@ -6,8 +6,6 @@ CREATE TABLE IF NOT EXISTS characteristic_reviews ( id INT, characteristic_id IN
 
 CREATE TABLE IF NOT EXISTS review_photos ( id INT, review_id INT, photo_url TEXT);
 
-DROP TABLE reviews;
-
 CREATE TABLE IF NOT EXISTS reviews ( id INT,
 product_id INT,
 rating INT,
