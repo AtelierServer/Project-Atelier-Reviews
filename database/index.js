@@ -19,7 +19,12 @@ client.connect()
     console.log(result.rows, 'result');
   })
   .then(() => {
-    client.query("\copy products(id, name, slogan, description, category, default_price) FROM '/Users/amarinsam/Documents/Code/Hack Reactor/SDC_PROJECT-ATELIER/Project-Atelier-Reviews/database/data/productsFiltered.csv' WITH (FORMAT csv)");
+    var stream = client.query(copyFrom('COPY products FROM STDIN WITH (FORMAT csv)'));
+    var fileStream = fs.createReadStream('/Users/amarinsam/Documents/Code/Hack Reactor/SDC_PROJECT-ATELIER/Project-Atelier-Reviews/database/data/productsFiltered.csv');
+    fileStream.on('error', (err) => console.error('File stream error:', err));
+    stream.on('error', (err) => console.error('Stream error:', err));
+    stream.on('finish', () => console.log('Copy finished'));
+    fileStream.pipe(stream);
   })
   .catch((err) => {
     console.log('FAT ERROR');
@@ -29,3 +34,8 @@ client.connect()
   .finally(() => {
     client.end();
   });
+
+
+  // .then(() => {
+  //   client.query("\copy products(id, name, slogan, description, category, default_price) FROM '/Users/amarinsam/Documents/Code/Hack Reactor/SDC_PROJECT-ATELIER/Project-Atelier-Reviews/database/data/productsFiltered.csv' WITH (FORMAT csv)");
+  // })
