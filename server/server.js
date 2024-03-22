@@ -7,6 +7,8 @@ const cloudinary = require('cloudinary').v2;
 const compression = require('compression');
 const config = require('../config.js');
 
+const db = require('../database/index');
+
 const auth = `${config.GITHUB_APIKEY}`;
 const app = express();
 
@@ -38,6 +40,47 @@ app.all('/api/*', (req, res) => {
     }
   });
 });
+
+app.get('/reviewGetTest', (req, res) => {
+  db.getAll()
+    .then((response) => {
+      res.send(response);
+    })
+    .catch((err) => {
+      console.error(err);
+    });
+});
+
+app.post('/reviewPostTest', (req, res) => {
+  // console.log(req.body, 'req body');
+  // write reviews into reviews
+  const params = [
+    req.body.product_id,
+    req.body.rating,
+    Number(req.body.date),
+    req.body.summary,
+    req.body.body,
+    req.body.recommend,
+    req.body.name,
+    req.body.email,
+  ];
+  // write photos into photos
+  // const params = [req.body]
+  db.post(params)
+    .then((response) => {
+      res.send(response);
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send(err);
+    });
+});
+
+// REFACTOR THIS, SO THAT I CAN MAKE REQUESTS TO DATABASE
+// set up routes to API
+//    export db connection
+//    something like... db.get =
+// create API. i.e., when database gets a request, return this query.
 
 // Make cloudinary API request to upload photo and return url from response to client
 app.post('/photos', (req, res) => {
