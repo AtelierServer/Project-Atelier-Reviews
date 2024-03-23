@@ -31,6 +31,8 @@ app.post('/reviewsPostTest', (req, res) => {
     req.body.recommend,
     req.body.name,
     req.body.email,
+    req.body.photos,
+    req.body.characteristics
   ];
   // write photos into photos
   // const params = [req.body]
