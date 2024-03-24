@@ -67,7 +67,6 @@ const get = (queryParams) => {
 };
 
 const reviewsPost = (params) => new Promise((resolve, reject) => {
-  console.log(params, params[8], 'this is PARAMS')
   const client = new Client();
   client.connect()
     .then(() => {
