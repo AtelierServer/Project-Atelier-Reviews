@@ -1,9 +1,9 @@
 CREATE DATABASE productsDB;
 
--- DROP TABLE products;
--- DROP TABLE characteristic_reviews;
--- DROP TABLE review_photos;
-DROP TABLE reviews;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS characteristic_reviews CASCADE;
+DROP TABLE IF EXISTS review_photos CASCADE;
+DROP TABLE IF EXISTS reviews CASCADE;
 
 CREATE TABLE IF NOT EXISTS products ( id SERIAL, name VARCHAR(255), slogan TEXT, description TEXT, category VARCHAR(255), default_price INT);
 
