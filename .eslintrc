@@ -1,8 +1,0 @@
-{
-  "extends": ["airbnb", "airbnb/hooks"],
-  "rules": {
-    "import/extensions": "off",
-    "react/prop-types": "off",
-    "no-console": "off"
-  }
-}
