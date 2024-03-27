@@ -8,20 +8,28 @@ const get = (queryParams) => {
       .then(() => {
         let selectQueryStr = 'SELECT filtered_reviews.*, photo_agg.photos';
         let fromQueryStr = `
-          FROM
-            (SELECT * FROM reviews WHERE product_id = ${queryParams.product_id}) AS filtered_reviews
-          LEFT JOIN
-            (SELECT
-               review_id,
-               COALESCE(json_agg(json_build_object('id', id, 'url', photo_url)) FILTER (WHERE id IS NOT NULL), '[]'::json) AS photos
-             FROM
-               review_photos
-             GROUP BY
-               review_id
-            ) AS photo_agg
-          ON
-            filtered_reviews.id = photo_agg.review_id
-        `;
+        FROM
+          (SELECT * FROM reviews WHERE product_id = ${queryParams.product_id}) AS filtered_reviews
+        LEFT JOIN
+          (SELECT
+             sub.review_id,
+             COALESCE(json_agg(json_build_object('id', sub.id, 'url', sub.photo_url)) FILTER (WHERE sub.id IS NOT NULL), '[]'::json) AS photos
+           FROM
+             (SELECT
+                filtered_reviews.id AS review_id,
+                rp.id,
+                rp.photo_url
+              FROM
+                (SELECT * FROM reviews WHERE product_id = ${queryParams.product_id}) AS filtered_reviews
+              LEFT JOIN
+                review_photos rp ON filtered_reviews.id = rp.review_id
+             ) AS sub
+           GROUP BY
+             sub.review_id
+          ) AS photo_agg
+        ON
+          filtered_reviews.id = photo_agg.review_id
+      `;
 
         let pageQueryStr = '';
         let countQueryStr = '';
@@ -48,11 +56,12 @@ const get = (queryParams) => {
           sortQueryStr = 'ORDER BY relevance_score DESC';
         }
 
-        let queryStr = `explain (analyze, buffers, verbose, settings, format json) ${selectQueryStr}${additionalSelect} ${fromQueryStr} ${sortQueryStr} ${countQueryStr} ${offsetQueryStr};`;
+        let queryStr = `${selectQueryStr}${additionalSelect} ${fromQueryStr} ${sortQueryStr} ${countQueryStr} ${offsetQueryStr};`;
 
         console.log(queryStr, 'querystr');
         return client.query(queryStr);
-              })
+
+      })
       .then((result) => {
         resolve(result.rows);
       })
