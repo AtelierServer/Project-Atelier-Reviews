@@ -41,11 +41,8 @@ const get = (queryParams) => {
           const offset = (queryParams.page - 1);
           offsetQueryStr = `OFFSET ${offset}`;
         }
-        if (queryParams.count) {
-          countQueryStr = `LIMIT ${queryParams.count}`;
-        } else {
-          countQueryStr = 'LIMIT 5';
-        }
+
+        let limitQueryStr = `LIMIT ${queryParams.count || 5}`;
 
         if (queryParams.sort === 'newest') {
           sortQueryStr = 'ORDER BY filtered_reviews.date DESC';
@@ -56,7 +53,7 @@ const get = (queryParams) => {
           sortQueryStr = 'ORDER BY relevance_score DESC';
         }
 
-        let queryStr = `${selectQueryStr}${additionalSelect} ${fromQueryStr} ${sortQueryStr} ${countQueryStr} ${offsetQueryStr};`;
+        let queryStr = `${selectQueryStr}${additionalSelect} ${fromQueryStr} ${sortQueryStr} ${limitQueryStr} ${offsetQueryStr};`;
 
         console.log(queryStr, 'querystr');
         return client.query(queryStr);
