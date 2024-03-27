@@ -1,4 +1,5 @@
 require('dotenv').config();
+const apicache = require('apicache');
 const path = require('path');
 const express = require('express');
 const axios = require('axios');
@@ -7,6 +8,13 @@ const db = require('../database/index');
 
 const app = express();
 app.use(express.json());
+
+let cache = apicache.middleware;
+app.use(cache('30 seconds'));
+app.get('/will-be-cached', (req, res) => {
+ res.json({ success: true })
+});
+
 
 app.get('/reviewsGetTest/', (req, res) => {
   db.get(req.query)

@@ -6,51 +6,53 @@ const get = (queryParams) => {
     const client = new Client();
     client.connect()
       .then(() => {
-        let selectQueryStr = 'SELECT *'
+        let selectQueryStr = 'SELECT filtered_reviews.*, photo_agg.photos';
+        let fromQueryStr = `
+          FROM
+            (SELECT * FROM reviews WHERE product_id = ${queryParams.product_id}) AS filtered_reviews
+          LEFT JOIN
+            (SELECT
+               review_id,
+               COALESCE(json_agg(json_build_object('id', id, 'url', photo_url)) FILTER (WHERE id IS NOT NULL), '[]'::json) AS photos
+             FROM
+               review_photos
+             GROUP BY
+               review_id
+            ) AS photo_agg
+          ON
+            filtered_reviews.id = photo_agg.review_id
+        `;
+
         let pageQueryStr = '';
         let countQueryStr = '';
         let sortQueryStr = '';
-        let product_idQueryStr = '';
-        let filterQueryStr = ' AND date IS NOT NULL ';
         let offsetQueryStr = '';
-
-        if (!queryParams.product_id) {
-          const error = new Error('No query parameters provided')
-          error.code = 'ERR_BAD_REQUEST';
-          error.status = 422;
-          reject(error);
-          return;
-        }
-
-        product_idQueryStr = `WHERE product_id = ${queryParams.product_id}`;
-
-        const count = queryParams.count ? queryParams.count : 5;
+        let additionalSelect = '';
 
         if (queryParams.page) {
           const offset = (queryParams.page - 1);
           offsetQueryStr = `OFFSET ${offset}`;
         }
         if (queryParams.count) {
-          countQueryStr = `LIMIT ${queryParams.count}`
+          countQueryStr = `LIMIT ${queryParams.count}`;
         } else {
-          countQueryStr = 'LIMIT 5'
+          countQueryStr = 'LIMIT 5';
         }
+
         if (queryParams.sort === 'newest') {
-          console.log('here')
-          sortQueryStr = 'ORDER BY date DESC'
+          sortQueryStr = 'ORDER BY filtered_reviews.date DESC';
         } else if (queryParams.sort === 'helpfulness') {
-          sortQueryStr = 'ORDER BY helpfulness DESC'
-          filterQueryStr += 'AND helpfulness IS NOT NULL '
+          sortQueryStr = 'ORDER BY filtered_reviews.helpfulness DESC';
         } else {
-          selectQueryStr += ' , helpfulness - ((CURRENT_DATE - DATE(date)) / 10) AS relevance_score'
-          sortQueryStr = 'ORDER BY relevance_score DESC'
-          filterQueryStr += 'AND helpfulness IS NOT NULL '
+          additionalSelect = ', filtered_reviews.helpfulness - ((CURRENT_DATE - DATE(filtered_reviews.date)) / 10) AS relevance_score';
+          sortQueryStr = 'ORDER BY relevance_score DESC';
         }
 
-        const queryStr = selectQueryStr + ' FROM reviews ' + product_idQueryStr + filterQueryStr + sortQueryStr + ' ' + countQueryStr + ' ' + offsetQueryStr + ';';
-        return client.query(queryStr)
+        let queryStr = `explain (analyze, buffers, verbose, settings, format json) ${selectQueryStr}${additionalSelect} ${fromQueryStr} ${sortQueryStr} ${countQueryStr} ${offsetQueryStr};`;
 
-      })
+        console.log(queryStr, 'querystr');
+        return client.query(queryStr);
+              })
       .then((result) => {
         resolve(result.rows);
       })
@@ -58,7 +60,7 @@ const get = (queryParams) => {
         console.log('FAT ERROR');
         console.error(err.message);
         console.error(err.stack);
-        reject(err);
+        reject(err)
       })
       .finally(() => {
         client.end();
@@ -98,6 +100,9 @@ const reviewsPost = (params) => new Promise((resolve, reject) => {
     })
     .catch((err) => {
       reject(err);
+    })
+    .finally(() => {
+      client.end();
     });
 
   // other code for photos, characteristics
