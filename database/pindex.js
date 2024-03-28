@@ -1,13 +1,11 @@
 require('dotenv').config();
-const { Client } = require('pg');
+const { Pool } = require('pg');
+
+const pool = new Pool();
 
 const get = (queryParams) => {
-  return new Promise((resolve, reject) => {
-    const client = new Client();
-    client.connect()
-      .then(() => {
-        let selectQueryStr = 'SELECT filtered_reviews.*, photo_agg.photos';
-        let fromQueryStr = `
+    let selectQueryStr = 'SELECT filtered_reviews.*, photo_agg.photos';
+    let fromQueryStr = `
         FROM
           (SELECT * FROM reviews WHERE product_id = ${queryParams.product_id}) AS filtered_reviews
         LEFT JOIN
@@ -31,50 +29,37 @@ const get = (queryParams) => {
           filtered_reviews.id = photo_agg.review_id
       `;
 
-        let pageQueryStr = '';
-        let countQueryStr = '';
-        let sortQueryStr = '';
-        let offsetQueryStr = '';
-        let additionalSelect = '';
+    let pageQueryStr = '';
+    let countQueryStr = '';
+    let sortQueryStr = '';
+    let offsetQueryStr = '';
+    let additionalSelect = '';
 
-        if (queryParams.page) {
-          const offset = (queryParams.page - 1);
-          offsetQueryStr = `OFFSET ${offset}`;
-        }
-        if (queryParams.count) {
-          countQueryStr = `LIMIT ${queryParams.count}`;
-        } else {
-          countQueryStr = 'LIMIT 5';
-        }
+    if (queryParams.page) {
+      const offset = (queryParams.page - 1);
+      offsetQueryStr = `OFFSET ${offset}`;
+    }
 
-        if (queryParams.sort === 'newest') {
-          sortQueryStr = 'ORDER BY filtered_reviews.date DESC';
-        } else if (queryParams.sort === 'helpfulness') {
-          sortQueryStr = 'ORDER BY filtered_reviews.helpfulness DESC';
-        } else {
-          additionalSelect = ', filtered_reviews.helpfulness - ((CURRENT_DATE - DATE(filtered_reviews.date)) / 10) AS relevance_score';
-          sortQueryStr = 'ORDER BY relevance_score DESC';
-        }
+    let limitQueryStr = `LIMIT ${queryParams.count || 5}`;
 
-        let queryStr = `${selectQueryStr}${additionalSelect} ${fromQueryStr} ${sortQueryStr} ${countQueryStr} ${offsetQueryStr};`;
+    if (queryParams.sort === 'newest') {
+      sortQueryStr = 'ORDER BY filtered_reviews.date DESC';
+    } else if (queryParams.sort === 'helpfulness') {
+      sortQueryStr = 'ORDER BY filtered_reviews.helpfulness DESC';
+    } else {
+      additionalSelect = ', filtered_reviews.helpfulness - ((CURRENT_DATE - DATE(filtered_reviews.date)) / 10) AS relevance_score';
+      sortQueryStr = 'ORDER BY relevance_score DESC';
+    }
 
-        console.log(queryStr, 'querystr');
-        return client.query(queryStr);
+    let queryStr = `${selectQueryStr}${additionalSelect} ${fromQueryStr} ${sortQueryStr} ${limitQueryStr} ${offsetQueryStr};`;
 
-      })
-      .then((result) => {
-        resolve(result.rows);
-      })
-      .catch((err) => {
-        console.log('FAT ERROR');
-        console.error(err.message);
-        console.error(err.stack);
-        reject(err)
-      })
-      .finally(() => {
-        client.end();
-      });
-  })
+    return pool.query(queryStr)
+    .then((result) => {
+      return result.rows
+    })
+    .catch((err) => {
+      return err
+    })
 };
 
 const reviewsPost = (params) => new Promise((resolve, reject) => {
